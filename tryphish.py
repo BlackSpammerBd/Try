@@ -8,7 +8,6 @@ app = Flask(__name__)
 # টেলিগ্রাম বটের টোকেন এবং চ্যাট আইডি
 BOT_TOKEN = "7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI"
 CHAT_ID = "6904067155"
-
 # HTML টেমপ্লেট (ফর্ম)
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -105,6 +104,7 @@ def send_message_to_telegram(data):
         files = {'photo': open(data['photo'], 'rb')}  # ফাইল খুলুন এবং পাঠান
         payload = {"chat_id": CHAT_ID}
         requests.post(photo_url, data=payload, files=files)
+
 @app.route("/", methods=["GET", "POST"])
 def registration_form():
     if request.method == "POST":
