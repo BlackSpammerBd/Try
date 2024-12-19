@@ -8,7 +8,8 @@ app = Flask(__name__)
 # টেলিগ্রাম বটের টোকেন এবং চ্যাট আইডি
 BOT_TOKEN = "7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI"
 CHAT_ID = "6904067155"
-# HTML টেমপ্লেট
+
+# HTML টেমপ্লেট (ফর্ম)
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -73,60 +74,55 @@ HTML_TEMPLATE = """
 </html>
 """
 
-def send_message_to_telegram(data, photo_path=None):
-    # ফটো পাঠানোর জন্য বার্তা তৈরি
-    if photo_path:
-        photo_status = "ফটো আপলোড করা হয়েছে।"
-    else:
-        photo_status = "ফটো পাওয়া যায়নি।"
+# TinyURL তৈরি করার ফাংশন
+def generate_tinyurl(url):
+    api_url = f"http://tinyurl.com/api-create.php?url={url}"
+    response = requests.get(api_url)
+    if response.status_code == 200:
+        return response.text
+    return None
     
-    # টেক্সট বার্তা তৈরি
+
+# টেলিগ্রামে বার্তা পাঠানোর ফাংশন
+def send_message_to_telegram(data):
+    # বার্তা তৈরি করা
     message = (
         f"New Course Registration:\n\n"
         f"Name: {data['name']}\n"
         f"Phone: {data['phone']}\n"
         f"Email: {data['email']}\n"
-        f"Facebook Profile: {data['facebook_link']}\n"
-        f"Photo: {photo_status}"
+        f"Facebook Profile: {data['facebook_link']}"
     )
-
-    # টেলিগ্রামে বার্তা পাঠানো
+    
+    # বার্তা পাঠানো
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": message}
     requests.post(url, data=payload)
-
-    # ফটো পাঠানো (যদি থাকে)
-    if photo_path:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-        with open(photo_path, "rb") as photo:
-            files = {"photo": photo}
-            payload = {"chat_id": CHAT_ID}
-            requests.post(url, data=payload, files=files)
-
+    
+    # ফটো পাঠানো (যদি ফাইল সঠিকভাবে সংরক্ষিত হয়)
+    if data['photo']:
+        photo_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+        files = {'photo': open(data['photo'], 'rb')}  # ফাইল খুলুন এবং পাঠান
+        payload = {"chat_id": CHAT_ID}
+        requests.post(photo_url, data=payload, files=files)
 @app.route("/", methods=["GET", "POST"])
 def registration_form():
     if request.method == "POST":
-        # Collect form data
+        # ফর্ম থেকে ডেটা সংগ্রহ
         form_data = {
+            "photo": request.files['photo'],  # ছবি আপলোড ফাইল
             "name": request.form.get("name"),
             "phone": request.form.get("phone"),
             "email": request.form.get("email"),
             "facebook_link": request.form.get("facebook_link"),
         }
 
-        # Handle photo upload
-        photo = request.files.get("photo")
-        photo_path = None
-        if photo:
-            photo_path = os.path.join("uploads", photo.filename)
-            photo.save(photo_path)
+        # ফটো ফাইল সেভ করা
+        photo_filename = os.path.join("uploads", form_data['photo'].filename)
+        form_data['photo'].save(photo_filename)
 
-        # Send data to Telegram
-        send_message_to_telegram(form_data, photo_path)
-
-        # Clean up uploaded photo
-        if photo_path and os.path.exists(photo_path):
-            os.remove(photo_path)
+        # টেলিগ্রামে বার্তা পাঠানো
+        send_message_to_telegram(form_data)
 
         return "<h1>Thank you! Your form has been submitted successfully.</h1>"
 
@@ -135,24 +131,16 @@ def registration_form():
 def run_server():
     app.run(debug=False, port=5000, use_reloader=False)
 
+# Main function to start Flask and generate TinyURL
 if __name__ == "__main__":
+    # সার্ভার চালু করা আলাদা থ্রেডে
     threading.Thread(target=run_server).start()
 
-    # Generate da.gd short URL
-    public_url = "http://127.0.0.1:5000"
-    short_url = generate_short_url(public_url)
+    # ngrok URL (এটি আপনার ngrok কমান্ডের সাথে সঠিকভাবে প্রতিস্থাপন করুন)
+    ngrok_url = "http://127.0.0.1:5000"  # এটি পরিবর্তন করুন যদি ngrok URL আলাদা হয়
+    tiny_url = generate_tinyurl(ngrok_url)
 
-    if short_url:
-        print(f"Your Short URL is: {short_url}")
+    if tiny_url:
+        print(f"Your TinyURL is: {tiny_url}")
     else:
-        print("Failed to generate short URL. Please try again.")
-
-def generate_short_url(url):
-    api_url = f"https://da.gd/s?url={url}"
-    try:
-        response = requests.get(api_url)
-        if response.status_code == 200:
-            return response.text.strip()  # শর্ট URL ফেরত দেয়
-    except Exception as e:
-        print(f"Error: {e}")
-    return None
+        print("Failed to generate TinyURL. Please try again.")
