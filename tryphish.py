@@ -1,15 +1,13 @@
 import os
 import subprocess
+import time
 from flask import Flask, request
 import telegram
-from dotenv import load_dotenv
 import requests
 
-# .env ফাইল থেকে টোকেন এবং চ্যাট আইডি লোড করুন
-load_dotenv()
-
-TELEGRAM_TOKEN = os.getenv("7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI")
-CHAT_ID = os.getenv("6904067155")
+# সরাসরি টেলিগ্রাম টোকেন এবং চ্যাট আইডি এখানে দিন
+TELEGRAM_TOKEN = '7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI'  # আপনার টেলিগ্রাম বট টোকেন
+CHAT_ID = '6904067155'  # আপনার টেলিগ্রাম চ্যাট আইডি
 
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
@@ -88,6 +86,7 @@ def start_ngrok(port):
     """Ngrok দিয়ে পাবলিক URL তৈরি করুন"""
     ngrok_path = "ngrok"  # নিশ্চিত করুন ngrok ইনস্টল করা আছে এবং PATH এ যোগ করা হয়েছে
     subprocess.run([ngrok_path, "http", str(port)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(2)  # Ngrok কিছু সময় নিয়ে URL তৈরি করে
     response = requests.get("http://127.0.0.1:4040/api/tunnels")
     public_url = response.json()["tunnels"][0]["public_url"]
     return public_url
