@@ -1,7 +1,7 @@
 import os
-from flask import Flask, request, render_template_string
 import socket
 import requests
+from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
 
@@ -144,14 +144,18 @@ def find_free_port():
 
 def shorten_url(url):
     """Shortens a given URL using is.gd API."""
+    if "localhost" in url or "127.0.0.1" in url:
+        return "Error: Cannot shorten localhost URL. Use Ngrok or a public URL."
     api_url = f"https://is.gd/create.php?format=simple&url={url}"
     response = requests.get(api_url)
     return response.text
 
 if __name__ == "__main__":
     port = find_free_port()
+    print(f"Starting Flask server on port {port}...")
+    os.system(f"start ngrok http {port}")  # Automatically start Ngrok
     local_url = f"http://127.0.0.1:{port}/form"
+    print(f"Local URL: {local_url}")
     short_url = shorten_url(local_url)
-    print(f"Server is running on: {local_url}")
     print(f"Shortened URL: {short_url}")
     app.run(host="127.0.0.1", port=port, debug=True)
